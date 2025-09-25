@@ -1,0 +1,6 @@
+defaults:
+  - model: unet
+  - data: mixer_64
+  - trainer: default
+
+experiment_name: "topo_unet_test"

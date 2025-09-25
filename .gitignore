@@ -1,0 +1,47 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.pyo
+*.egg
+*.egg-info/
+.eggs/
+
+# --- Virtual environments ---
+.env
+.venv
+venv/
+env/
+ENV/
+*.env
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+*.ipynb~
+
+# --- Data & outputs ---
+data/
+datasets/
+outputs/          # Hydra’s default output dir
+logs/
+mlruns/           # MLflow experiment logs
+optuna_study.db   # Optuna sqlite db (if local)
+checkpoints/
+*.ckpt
+
+# --- System files ---
+.DS_Store
+Thumbs.db
+
+# --- IDEs/editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Temporary files ---
+*.tmp
+*.log
+*.bak
+*.old

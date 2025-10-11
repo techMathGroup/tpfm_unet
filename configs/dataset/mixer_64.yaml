@@ -1,9 +1,6 @@
-data:
-  batch_size: 16
-  num_workers: 4
-  train_path: "./data/mixer_64/training.csv"
-  val_path: "./data/mixer_64/validation.csv"
-  test_path: "./data/mixer_64/testing.csv"
-  coordinate_file_path: "./data/mixer_64/coordinates.csv"
-  resolution: 64
-  max_samples: 0
+batch_size: 16
+num_workers: 4
+val_split: 0.2
+data_file: "./data/mixer_64.npz"
+max_samples: 0
+normalize: True

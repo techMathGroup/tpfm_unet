@@ -21,11 +21,10 @@ ENV/
 *.ipynb~
 
 # --- Data & outputs ---
-data/
-datasets/
 outputs/          # Hydra’s default output dir
 logs/
-mlruns/           # MLflow experiment logs
+mlruns/           # MLflow logs
+notebooks/
 optuna_study.db   # Optuna sqlite db (if local)
 checkpoints/
 *.ckpt
@@ -45,3 +44,5 @@ Thumbs.db
 *.log
 *.bak
 *.old
+
+working/

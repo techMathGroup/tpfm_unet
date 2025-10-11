@@ -2,15 +2,20 @@ import hydra
 from omegaconf import DictConfig
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import MLFlowLogger
-from src.model import UNet
-from src.datamodule import FluidFlowDataset
+from model import UNet
+from datamodule import FluidFlowDataModule
 
 
-@hydra.main(config_path="../configs", config_name="config", version_base="1.0")
+@hydra.main(config_path="../configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
+    print("------------------------------------------------")
+    print("Configuration:\n", cfg)
+    print("------------------------------------------------")
+    pl.seed_everything(42)
+
     # Model and data
     model = UNet(**cfg.model)
-    datamodule = FluidFlowDataset(**cfg.data)
+    datamodule = FluidFlowDataModule(**cfg.dataset)
 
     # MLflow logger
     mlf_logger = MLFlowLogger(experiment_name=cfg.experiment_name)

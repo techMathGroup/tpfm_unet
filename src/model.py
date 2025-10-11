@@ -10,18 +10,18 @@ class UNet(pl.LightningModule):
     def __init__(self,
                  in_channels,
                  out_channels,
-                 kernel_size,
-                 padding,
-                 mean,
-                 std,
-                 lr=1e-3
+                 base_filters=16,   # TODO: currently unused
+                 depth=3,          # TODO: currently unused
+                 kernel_size=3,
+                 padding=1,
+                 learning_rate=1e-3
                  ):
         super().__init__()
         self.save_hyperparameters(ignore=['mean', 'std'])
 
         # Store mean and std as buffers for device management
-        self.register_buffer('mean', mean)
-        self.register_buffer('std', std)
+        # self.register_buffer('mean', mean)
+        # self.register_buffer('std', std)
 
         self.enc1 = self._convolution_block(in_channels, 16)
         self.enc2 = self._convolution_block(16, 32)
@@ -31,13 +31,13 @@ class UNet(pl.LightningModule):
 
         self.bottleneck = self._convolution_block(64, 128)
 
-        self.up2 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.up2 = nn.ConvTranspose2d(128, 64, kernel_size=self.hparams.kernel_size, stride=2)
         self.dec2 = self._convolution_block(128, 64)
 
-        self.up1 = nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2)
+        self.up1 = nn.ConvTranspose2d(64, 32, kernel_size=self.hparams.kernel_size, stride=2)
         self.dec1 = self._convolution_block(64, 32)
 
-        self.up0 = nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2)
+        self.up0 = nn.ConvTranspose2d(32, 16, kernel_size=self.hparams.kernel_size, stride=2)
         self.dec0 = self._convolution_block(32, 16)
 
         self.final = nn.Conv2d(16, out_channels, kernel_size=1)
@@ -59,10 +59,11 @@ class UNet(pl.LightningModule):
             nn.ReLU(inplace=True),
         )
 
-    def denormalize_output(self, sample, eps=1e-6):
-        return sample * (self.std.view(-1, 1, 1) + eps) + self.mean.view(-1, 1, 1)
+    @staticmethod
+    def denormalize_output(sample, mean, std, eps=1e-6):
+        return sample * (std.view(-1, 1, 1) + eps) + mean.view(-1, 1, 1)
 
-    def forward(self, x, debug=False, denormalize=False):
+    def forward(self, x, debug=False, denormalize=False, mean=None, std=None):
         y = x.clone()
 
         e1 = pad_to_even(self.enc1(x))
@@ -99,8 +100,8 @@ class UNet(pl.LightningModule):
         out = self.final(d0)
         out = mask_lambda(out, y)
 
-        if denormalize:
-            out = self.denormalize_output(out)
+        if denormalize and (mean is not None) and (std is not None):
+            out = self.denormalize_output(out, mean, std)
 
         return out
 
@@ -134,5 +135,5 @@ class UNet(pl.LightningModule):
         """
         Configures the optimizer for training.
         """
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.learning_rate)
         return optimizer

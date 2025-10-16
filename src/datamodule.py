@@ -79,12 +79,6 @@ class FluidFlowDataModule(pl.LightningDataModule):
             persistent_workers=self.num_workers > 0
         )
 
-    def teardown(self, stage=None):
-        # Optional: save normalizer parameters for inference
-        if self.normalizer is not None and stage == "fit":
-            os.makedirs("artifacts", exist_ok=True)
-            self.normalizer.save("artifacts/normalizer.npz")
-
 
 class Normalizer:
     def __init__(self, mean=None, std=None, eps=1e-8):

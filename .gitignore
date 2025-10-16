@@ -21,6 +21,7 @@ ENV/
 *.ipynb~
 
 # --- Data & outputs ---
+artifacts/
 outputs/          # Hydra’s default output dir
 logs/
 mlruns/           # MLflow logs

@@ -1,0 +1,7 @@
+defaults:
+  - _self_
+  - model: unet
+  - dataset: mixer_256_upscaled_x4
+  - trainer: default
+
+experiment_name: "mixer_256_upscaled_x4_unet"

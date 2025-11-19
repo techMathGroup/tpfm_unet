@@ -45,14 +45,14 @@ def main(cfg: DictConfig):
     val_loader = datamodule.val_dataloader()
     batch = next(iter(val_loader))
     x, y = batch
-    max_samples = min(x.shape[0], 8)
+    max_samples = min(x.shape[0], 5)  # Limit to 5 samples for visualization
     x, y = x[:max_samples], y[:max_samples]
     model.eval()
     with torch.no_grad():
         output = model(x)
 
     log_predictions(
-        normalizer.inverse_transform(x),
+        x,
         normalizer.inverse_transform(y),
         normalizer.inverse_transform(output),
         mlf_logger)

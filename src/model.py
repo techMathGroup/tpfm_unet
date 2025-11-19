@@ -10,8 +10,8 @@ class UNet(pl.LightningModule):
     def __init__(self,
                  in_channels,
                  out_channels,
-                 base_filters=16,   # TODO: currently unused
-                 depth=3,          # TODO: currently unused
+                 base_filters=16,
+                 depth=3,
                  kernel_size=3,
                  padding=1,
                  learning_rate=1e-3
@@ -19,28 +19,42 @@ class UNet(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters(ignore=['mean', 'std'])
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.base_filters = base_filters
+        self.depth = depth
+        self.kernel_size = kernel_size
+        self.padding = padding
+        self.learning_rate = learning_rate
+
         # Store mean and std as buffers for device management
         # self.register_buffer('mean', mean)
         # self.register_buffer('std', std)
 
-        self.enc1 = self._convolution_block(in_channels, 16)
-        self.enc2 = self._convolution_block(16, 32)
-        self.enc3 = self._convolution_block(32, 64)
+        # Build encoder blocks
+        self.encoders = nn.ModuleList()
+        prev_channels = in_channels
+        for i in range(depth):
+            out_channels_enc = base_filters * (2 ** i)
+            self.encoders.append(self._convolution_block(prev_channels, out_channels_enc))
+            prev_channels = out_channels_enc
 
         self.pool = nn.MaxPool2d(2)
 
-        self.bottleneck = self._convolution_block(64, 128)
+        self.bottleneck = self._convolution_block(base_filters * (2 ** (depth - 1)), base_filters * (2 ** depth))
 
-        self.up2 = nn.ConvTranspose2d(128, 64, kernel_size=self.hparams.kernel_size, stride=2)
-        self.dec2 = self._convolution_block(128, 64)
+        # Build decoder blocks
+        self.upconvs = nn.ModuleList()
+        self.decoders = nn.ModuleList()
+        for i in reversed(range(depth)):
+            in_channels_dec = base_filters * (2 ** (i + 1))
+            out_channels_dec = base_filters * (2 ** i)
+            self.upconvs.append(nn.ConvTranspose2d(in_channels_dec, out_channels_dec,
+                                                   kernel_size=kernel_size, stride=2))
+            self.decoders.append(self._convolution_block(in_channels_dec, out_channels_dec))
 
-        self.up1 = nn.ConvTranspose2d(64, 32, kernel_size=self.hparams.kernel_size, stride=2)
-        self.dec1 = self._convolution_block(64, 32)
-
-        self.up0 = nn.ConvTranspose2d(32, 16, kernel_size=self.hparams.kernel_size, stride=2)
-        self.dec0 = self._convolution_block(32, 16)
-
-        self.final = nn.Conv2d(16, out_channels, kernel_size=1)
+        # Final convolution
+        self.final = nn.Conv2d(base_filters, out_channels, kernel_size=1)
 
         # Loss function
         # TODO: add physics loss
@@ -49,12 +63,12 @@ class UNet(pl.LightningModule):
 
     def _convolution_block(self, in_c, out_c):
         return nn.Sequential(
-            nn.Conv2d(in_c, out_c, kernel_size=self.hparams.kernel_size,
-                      padding=self.hparams.padding, padding_mode='replicate'),
+            nn.Conv2d(in_c, out_c, kernel_size=self.kernel_size,
+                      padding=self.padding, padding_mode='replicate'),
             nn.BatchNorm2d(out_c),
             nn.ReLU(inplace=True),
-            nn.Conv2d(out_c, out_c, kernel_size=self.hparams.kernel_size,
-                      padding=self.hparams.padding, padding_mode='replicate'),
+            nn.Conv2d(out_c, out_c, kernel_size=self.kernel_size,
+                      padding=self.padding, padding_mode='replicate'),
             nn.BatchNorm2d(out_c),
             nn.ReLU(inplace=True),
         )
@@ -66,38 +80,28 @@ class UNet(pl.LightningModule):
     def forward(self, x, debug=False, denormalize=False, mean=None, std=None):
         y = x.clone()
 
-        e1 = pad_to_even(self.enc1(x))
+        enc_features = []
+        out = x
+        for i, encoder in enumerate(self.encoders):
+            out = pad_to_even(encoder(out))
+            enc_features.append(out)
+            if debug:
+                print(f"e{i + 1}: {out.shape}")
+            out = self.pool(out)
+
+        out = self.bottleneck(out)
         if debug:
-            print(f"e1: {e1.shape}")
+            print(f"bottleneck: {out.shape}")
 
-        e2_in = self.pool(e1)
-        e2 = pad_to_even(self.enc2(e2_in))
-        if debug:
-            print(f"e2: {e2.shape}")
+        for i in range(self.depth):
+            upconv = self.upconvs[i]
+            decoder = self.decoders[i]
+            up = upconv(out)
+            skip = enc_features[self.depth - 1 - i]
+            up = center_crop(up, skip)
+            out = decoder(torch.cat([up, skip], dim=1))
 
-        e3_in = self.pool(e2)
-        e3 = pad_to_even(self.enc3(e3_in))
-        if debug:
-            print(f"e3: {e3.shape}")
-
-        b_in = self.pool(e3)
-        b = self.bottleneck(b_in)
-        if debug:
-            print(f"bottleneck: {b.shape}")
-
-        up2 = self.up2(b)
-        up2 = center_crop(up2, e3)
-        d2 = self.dec2(torch.cat([up2, e3], dim=1))
-
-        up1 = self.up1(d2)
-        up1 = center_crop(up1, e2)
-        d1 = self.dec1(torch.cat([up1, e2], dim=1))
-
-        up0 = self.up0(d1)
-        up0 = center_crop(up0, e1)
-        d0 = self.dec0(torch.cat([up0, e1], dim=1))
-
-        out = self.final(d0)
+        out = self.final(out)
         out = mask_lambda(out, y)
 
         if denormalize and (mean is not None) and (std is not None):
@@ -135,5 +139,5 @@ class UNet(pl.LightningModule):
         """
         Configures the optimizer for training.
         """
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.learning_rate)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate)
         return optimizer

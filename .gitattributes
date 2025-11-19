@@ -3,4 +3,3 @@
 *.pt filter=lfs diff=lfs merge=lfs -text
 *.npy filter=lfs diff=lfs merge=lfs -text
 data/mixer_64.zip filter=lfs diff=lfs merge=lfs -text
-data/mixer_64.npz filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,7 @@
+defaults:
+  - _self_
+  - model: unet_32_3
+  - dataset: mixer_256
+  - trainer: default
+
+experiment_name: "mixer_256_unet"

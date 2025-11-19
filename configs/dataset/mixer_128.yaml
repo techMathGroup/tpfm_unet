@@ -1,0 +1,6 @@
+batch_size: 16
+num_workers: 4
+val_split: 0.2
+data_file: "./data/mixer_128.npz"
+max_samples: 0
+normalize: True

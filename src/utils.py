@@ -71,7 +71,6 @@ def plot_quiver(data_point, coords_array, padding=0.01, quiver_scale=1e2, ax=Non
 
     x_min, x_max = x.min(), x.max()
     y_min, y_max = y.min(), y.max()
-    # print(f"x_min: {x_min}, x_max: {x_max}, y_min: {y_min}, y_max: {y_max}")
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 8))
@@ -111,7 +110,7 @@ def plot_pressure(data_point, coords_array, ax=None):
         fig = plt.figure(figsize=(12, 8))
         ax = fig.add_subplot(111, projection='3d')
         created_fig = True
-    ax.plot_surface(x, y, p.numpy(), cmap='viridis')
+    ax.plot_surface(x, y, p.detach().numpy() if hasattr(p, "detach") else p, cmap='viridis')
     ax.set_title('Pressure Field (p)')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')

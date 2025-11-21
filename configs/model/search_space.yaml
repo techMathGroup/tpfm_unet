@@ -1,0 +1,3 @@
+model.base_filters: range(16, 64, step=16)
+model.depth: range(3, 6)
+model.learning_rate: tag(log, interval(1e-4, 5e-3))

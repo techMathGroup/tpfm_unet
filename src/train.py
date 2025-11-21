@@ -57,6 +57,17 @@ def main(cfg: DictConfig):
         normalizer.inverse_transform(output),
         mlf_logger)
 
+    # Compute final validation loss to return for hyperparameter optimization
+    val_loss = 0.0
+    for batch in val_loader:
+        x_val, y_val = batch
+        with torch.no_grad():
+            loss = model.get_loss(x_val, y_val)
+        val_loss += loss.item() * x_val.size(0)     # sum over batch size
+    val_loss /= len(val_loader.dataset)
+    print(f"Final validation loss: {val_loss:.6f}")
+    return val_loss
+
 
 if __name__ == "__main__":
     main()

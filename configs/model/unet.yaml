@@ -1,3 +1,4 @@
+# @package model
 in_channels: 4
 out_channels: 4
 base_filters: 16

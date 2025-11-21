@@ -141,3 +141,9 @@ class UNet(pl.LightningModule):
         """
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate)
         return optimizer
+
+
+    def get_loss(self, x, y):
+        y_hat = self(x)
+        loss = self.loss_fn(y_hat, y)
+        return loss

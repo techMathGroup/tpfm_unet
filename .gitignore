@@ -25,7 +25,7 @@ artifacts/
 outputs/          # Hydra’s default output dir
 logs/
 mlruns/           # MLflow logs
-notebooks/
+multirun/        # Hydra multirun output dir
 optuna_study.db   # Optuna sqlite db (if local)
 checkpoints/
 *.ckpt

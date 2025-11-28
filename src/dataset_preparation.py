@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from utils import plot_quiver, plot_pressure
 
 
-def prepare_dataset(dataset_dir, out_file, dimensions=(64, 64)):
+def prepare_dataset(dataset_dir, out_file, dimensions=(64, 64), with_coords=False):
     height, width = dimensions
 
     files = os.listdir(dataset_dir)
@@ -20,10 +20,12 @@ def prepare_dataset(dataset_dir, out_file, dimensions=(64, 64)):
     for f in files:
         print(f)
         df = pd.read_csv(f'{dataset_dir}/{f}').drop(columns=['cellI'])
-        df['x'] = coords_file['x']
-        df['y'] = coords_file['y']
-        df['z'] = coords_file['z']
+        if with_coords:
+            df['x'] = coords_file['x']
+            df['y'] = coords_file['y']
+            df['z'] = coords_file['z']
         df = df.to_numpy().T.reshape(-1, height, width)
+
         inputs.append(df[4:])
         outputs.append(df[0:4])
 
@@ -42,20 +44,23 @@ def prepare_dataset(dataset_dir, out_file, dimensions=(64, 64)):
 
     # Create a test split and put it aside
     test_size = int(0.1 * len(inputs))
-    test_inputs = np.array(inputs[:-test_size])
-    test_outputs = np.array(outputs[:-test_size])
+    test_inputs = np.array(inputs[-test_size:])
+    test_outputs = np.array(outputs[-test_size:])
 
     # Save
-    inputs = np.array(inputs)
-    outputs = np.array(outputs)
+    inputs = np.array(inputs[:-test_size])
+    outputs = np.array(outputs[:-test_size])
     np.savez(out_file, inputs=inputs, outputs=outputs)
     np.savez(out_file.replace('.npz', '_test.npz'), inputs=test_inputs, outputs=test_outputs)
 
+    print(f"Training set saved to {out_file} with {inputs.shape[0]} samples.")
+    print(f"Test set saved to {out_file.replace('.npz', '_test.npz')} with {test_inputs.shape[0]} samples.")
+
 
 if __name__ == "__main__":
-    dim = 128
-    trait = "_upscaled_x2"
+    dim = 256
+    trait = "_upscaled_x4"
     dataset_dir = f"../working/mixer_{dim}{trait}"
     out_file = f"../data/mixer_{dim}{trait}.npz"
-    prepare_dataset(dataset_dir, out_file, dimensions=(dim, dim))
+    prepare_dataset(dataset_dir, out_file, dimensions=(dim, dim), with_coords=False)
     print("Dataset preparation complete.")

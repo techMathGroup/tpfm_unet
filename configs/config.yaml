@@ -1,23 +1,8 @@
 defaults:
-  - model: unet
-  - dataset: mixer_64
-  - trainer: fast
-  - override hydra/sweeper: optuna
-  - override hydra/launcher: basic
+  - model: unet_32_5
+  - dataset: mixer_128
+  - trainer: default
+  - callbacks: default
   - _self_
 
-experiment_name: "default_experiment"
-
-hydra:
-  mode: "MULTIRUN"
-  sweeper:
-    n_jobs: 1
-    study_name: "hyperparameter_optimization"
-    storage: "sqlite:////Users/martinledl/Developer/avcr/tpfm_unet/optuna/optuna_studies.db"
-    n_trials: 20
-    direction: minimize  # or "maximize"
-    # Define the search space for hyperparameters
-    params:
-      model.base_filters: range(16, 64, step=16)
-      model.depth: range(3, 6)
-      model.learning_rate: tag(log, interval(1e-4, 5e-3))
+experiment_name: "mixer_128_fixed_dataset"

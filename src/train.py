@@ -2,6 +2,7 @@ import os
 import hydra
 from omegaconf import DictConfig
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import MLFlowLogger
 from model import UNet
 from datamodule import FluidFlowDataModule
@@ -24,7 +25,10 @@ def main(cfg: DictConfig):
     mlf_logger = MLFlowLogger(experiment_name=cfg.experiment_name)
 
     # Trainer
-    trainer = pl.Trainer(logger=mlf_logger, **cfg.trainer)
+    callbacks = [
+        EarlyStopping(**cfg.callbacks.early_stopping)
+    ]
+    trainer = pl.Trainer(logger=mlf_logger, callbacks=callbacks, **cfg.trainer)
 
     # Train
     trainer.fit(model, datamodule=datamodule)
@@ -40,6 +44,7 @@ def main(cfg: DictConfig):
         normalizer.save("artifacts/normalizer.npz")
         mlf_logger.experiment.log_artifact(mlf_logger.run_id, "artifacts/normalizer.npz")
         os.remove("artifacts/normalizer.npz")
+        os.rmdir("artifacts")
 
     # Visualization of predictions on validation set
     val_loader = datamodule.val_dataloader()

@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-from torchmetrics import MeanSquaredError
-
-from utils import pad_to_even, center_crop, mask_lambda
+# from torchmetrics import MeanSquaredError
 
 
 class UNet(pl.LightningModule):
@@ -50,16 +48,36 @@ class UNet(pl.LightningModule):
             in_channels_dec = base_filters * (2 ** (i + 1))
             out_channels_dec = base_filters * (2 ** i)
             self.upconvs.append(nn.ConvTranspose2d(in_channels_dec, out_channels_dec,
-                                                   kernel_size=kernel_size, stride=2))
+                                                   kernel_size=2, stride=2))
             self.decoders.append(self._convolution_block(in_channels_dec, out_channels_dec))
 
         # Final convolution
         self.final = nn.Conv2d(base_filters, out_channels, kernel_size=1)
 
+        self.smoothing = nn.Conv2d(
+            out_channels, out_channels,
+            kernel_size=5,
+            padding=2,
+            groups=out_channels,
+            bias=False,
+            padding_mode='replicate'
+        )
+        self.init_gaussian_kernel(self.smoothing, 5, 1.0)
+
         # Loss function
         # TODO: add physics loss
-        self.loss_fn = nn.MSELoss()
-        self.metric = MeanSquaredError()
+        self.mse_loss = nn.MSELoss()
+        # self.metric = MeanSquaredError()
+
+    @staticmethod
+    def init_gaussian_kernel(layer, k, sigma):
+        ax = torch.arange(k) - k // 2
+        xx, yy = torch.meshgrid(ax, ax, indexing="ij")
+        kernel = torch.exp(-(xx ** 2 + yy ** 2) / (2 * sigma ** 2))
+        kernel = kernel / kernel.sum()
+        kernel = kernel.view(1, 1, k, k)
+        with torch.no_grad():
+            layer.weight.copy_(kernel.repeat(layer.out_channels, 1, 1, 1))
 
     def _convolution_block(self, in_c, out_c):
         return nn.Sequential(
@@ -74,16 +92,47 @@ class UNet(pl.LightningModule):
         )
 
     @staticmethod
+    def tv_loss(pred):
+        # Penalize only for pressure channel (assumed to be channel index 3)
+        p = pred[:, 3:4, :, :]
+        dx = p[:, :, 1:, :] - p[:, :, :-1, :]
+        dy = p[:, :, :, 1:] - p[:, :, :, :-1]
+        return dx.abs().mean() + dy.abs().mean()
+
+    @staticmethod
+    def laplacian_loss(pred):
+        kernel = torch.tensor(
+            [[0, 1, 0],
+             [1, -4, 1],
+             [0, 1, 0]], dtype=torch.float32, device=pred.device
+        ).view(1, 1, 3, 3)
+        # Apply to pressure channel (assumed to be channel index 3)
+        lap = torch.nn.functional.conv2d(pred[:, 3:4, :, :], kernel, padding=1, )
+        return lap.pow(2).mean()
+
+    def loss_fn(self, pred, target, tv_weight=0.1, lap_weight=0.05):
+        mse = self.mse_loss(pred, target)
+        tv = tv_weight * self.tv_loss(pred)
+        # lap = lap_weight * self.laplacian_loss(pred)
+        return mse + tv
+
+    @staticmethod
     def denormalize_output(sample, mean, std, eps=1e-6):
         return sample * (std.view(-1, 1, 1) + eps) + mean.view(-1, 1, 1)
 
+    @staticmethod
+    def mask_lambda(x, y, lambda_index=0):
+        mask = 1.0 - y[:, lambda_index, :, :]
+        x[:, :3, :, :] *= mask.unsqueeze(1)
+        return x
+
     def forward(self, x, debug=False, denormalize=False, mean=None, std=None):
-        y = x.clone()
+        inputs = x.clone()
 
         enc_features = []
         out = x
         for i, encoder in enumerate(self.encoders):
-            out = pad_to_even(encoder(out))
+            out = encoder(out)  # For weird dimensions, use out = pad_to_even(encoder(out))
             enc_features.append(out)
             if debug:
                 print(f"e{i + 1}: {out.shape}")
@@ -98,14 +147,18 @@ class UNet(pl.LightningModule):
             decoder = self.decoders[i]
             up = upconv(out)
             skip = enc_features[self.depth - 1 - i]
-            up = center_crop(up, skip)
+            # for weird dimensions, use up = center_crop(up, skip)
+            if debug:
+                print(f"up{i + 1}: {up.shape}, skip{i + 1}: {skip.shape}")
             out = decoder(torch.cat([up, skip], dim=1))
 
         out = self.final(out)
-        out = mask_lambda(out, y)
+        out = self.smoothing(out)
 
         if denormalize and (mean is not None) and (std is not None):
             out = self.denormalize_output(out, mean, std)
+
+        out = self.mask_lambda(out, inputs)
 
         return out
 
@@ -133,7 +186,7 @@ class UNet(pl.LightningModule):
         loss = self.loss_fn(y_hat, y)
         # Log loss
         self.log('validation_loss', loss)
-        self.log('validation_mse', self.metric(y_hat, y))
+        # self.log('validation_mse', self.metric(y_hat, y))
 
     def configure_optimizers(self):
         """
@@ -141,7 +194,6 @@ class UNet(pl.LightningModule):
         """
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate)
         return optimizer
-
 
     def get_loss(self, x, y):
         y_hat = self(x)

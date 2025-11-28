@@ -1,0 +1,4 @@
+early_stopping:
+  monitor: "validation_loss"
+  patience: 10
+  mode: "min"

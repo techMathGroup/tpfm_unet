@@ -1,0 +1,3 @@
+- model.base_filters=48
+- model.depth=4
+- model.learning_rate=0.0013621945565999338

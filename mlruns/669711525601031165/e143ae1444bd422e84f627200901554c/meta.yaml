@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/martinledl/Developer/avcr/tpfm_unet/mlruns/669711525601031165/e143ae1444bd422e84f627200901554c/artifacts
+end_time: 1763820590925
+entry_point_name: ''
+experiment_id: '669711525601031165'
+lifecycle_stage: active
+run_id: e143ae1444bd422e84f627200901554c
+run_name: capable-auk-759
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1763820589310
+status: 4
+tags: []
+user_id: martinledl

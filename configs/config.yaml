@@ -1,8 +1,8 @@
 defaults:
   - model: unet_32_5
-  - dataset: mixer_128
+  - dataset: mixer_64
   - trainer: default
   - callbacks: default
   - _self_
 
-experiment_name: "mixer_128_fixed_dataset"
+experiment_name: "mixer_64_fixed_dataset"

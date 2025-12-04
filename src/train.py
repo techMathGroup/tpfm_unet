@@ -18,8 +18,9 @@ def main(cfg: DictConfig):
     pl.seed_everything(42)
 
     # Model and data
-    model = UNet(**cfg.model)
     datamodule = FluidFlowDataModule(**cfg.dataset)
+    normalizer = datamodule.normalizer
+    model = UNet(**cfg.model)
 
     # MLflow logger
     mlf_logger = MLFlowLogger(experiment_name=cfg.experiment_name)
@@ -38,7 +39,6 @@ def main(cfg: DictConfig):
     print("Starting post-training phase...")
 
     # Save the normalizer
-    normalizer = datamodule.normalizer
     if normalizer is not None:
         os.makedirs("artifacts", exist_ok=True)
         normalizer.save("artifacts/normalizer.npz")

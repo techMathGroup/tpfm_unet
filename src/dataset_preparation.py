@@ -59,7 +59,7 @@ def prepare_dataset(dataset_dir, out_file, dimensions=(64, 64), with_coords=Fals
 
 if __name__ == "__main__":
     dim = 256
-    trait = "_upscaled_x4"
+    trait = ""
     dataset_dir = f"../working/mixer_{dim}{trait}"
     out_file = f"../data/mixer_{dim}{trait}.npz"
     prepare_dataset(dataset_dir, out_file, dimensions=(dim, dim), with_coords=False)

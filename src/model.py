@@ -93,8 +93,9 @@ class UNet(pl.LightningModule):
 
     @staticmethod
     def tv_loss(pred):
-        # Penalize only for pressure channel (assumed to be channel index 3)
-        p = pred[:, 3:4, :, :]
+        # Maybe penalize only for pressure channel (assumed to be channel index 3)
+        # p = pred[:, 3:4, :, :]
+        p = pred
         dx = p[:, :, 1:, :] - p[:, :, :-1, :]
         dy = p[:, :, :, 1:] - p[:, :, :, :-1]
         return dx.abs().mean() + dy.abs().mean()
@@ -121,13 +122,25 @@ class UNet(pl.LightningModule):
         return sample * (std.view(-1, 1, 1) + eps) + mean.view(-1, 1, 1)
 
     @staticmethod
-    def mask_lambda(x, y, lambda_index=0):
-        mask = 1.0 - y[:, lambda_index, :, :]
-        x[:, :3, :, :] *= mask.unsqueeze(1)
+    def mask_lambda(x, y, lambda_index=0, mean=None, std=None):
+        if mean is None:
+            mean = torch.zeros(x.size(1), device=x.device)
+        if std is None:
+            std = torch.ones(x.size(1), device=x.device)
+
+        # Boolean mask where lambda == 1
+        mask = y[:, lambda_index, :, :] == 1
+
+        # Compute the normalized value that corresponds to 0 in original scale
+        zero_norm = -mean.view(-1, 1, 1) / std.view(-1, 1, 1)
+
+        # Apply to first 3 channels
+        x[:, :3, :, :][mask.unsqueeze(1).expand_as(x[:, :3, :, :])] = zero_norm[:3, :, :].unsqueeze(0)
+
         return x
 
     def forward(self, x, debug=False, denormalize=False, mean=None, std=None):
-        inputs = x.clone()
+        # inputs = x.clone()
 
         enc_features = []
         out = x
@@ -158,7 +171,7 @@ class UNet(pl.LightningModule):
         if denormalize and (mean is not None) and (std is not None):
             out = self.denormalize_output(out, mean, std)
 
-        out = self.mask_lambda(out, inputs)
+        # out = self.mask_lambda(out, inputs)
 
         return out
 

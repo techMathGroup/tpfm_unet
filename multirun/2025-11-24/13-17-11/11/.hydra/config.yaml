@@ -1,0 +1,20 @@
+model:
+  in_channels: 4
+  out_channels: 4
+  base_filters: 32
+  depth: 5
+  kernel_size: 3
+  padding: 1
+  learning_rate: 0.0006615715455277853
+dataset:
+  batch_size: 16
+  num_workers: 4
+  val_split: 0.2
+  data_file: ./data/mixer_128.npz
+  max_samples: 0
+  normalize: true
+trainer:
+  max_epochs: 80
+  accelerator: auto
+  log_every_n_steps: 10
+experiment_name: optimize_128_experiment

@@ -3,6 +3,7 @@ defaults:
   - dataset: mixer_64
   - trainer: default
   - callbacks: default
+  - settings: default
   - _self_
 
-experiment_name: "mixer_64_fixed_dataset"
+experiment_name: "mixer_channels_vs_depth"

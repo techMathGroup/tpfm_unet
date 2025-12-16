@@ -5,4 +5,4 @@ base_filters: 16
 depth: 3
 kernel_size: 3
 padding: 1
-learning_rate: 1e-3
+learning_rate: 3e-4

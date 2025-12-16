@@ -15,11 +15,12 @@ def main(cfg: DictConfig):
     print("------------------------------------------------")
     print("Configuration:\n", cfg)
     print("------------------------------------------------")
-    pl.seed_everything(42)
+    pl.seed_everything(420)
 
-    # Model and data
+    # Data
     datamodule = FluidFlowDataModule(**cfg.dataset)
-    normalizer = datamodule.normalizer
+
+    normalizer = datamodule.normalizer if hasattr(datamodule, 'normalizer') else None
     model = UNet(**cfg.model)
 
     # MLflow logger
@@ -46,21 +47,23 @@ def main(cfg: DictConfig):
         os.remove("artifacts/normalizer.npz")
         os.rmdir("artifacts")
 
-    # Visualization of predictions on validation set
     val_loader = datamodule.val_dataloader()
-    batch = next(iter(val_loader))
-    x, y = batch
-    max_samples = min(x.shape[0], 5)  # Limit to 5 samples for visualization
-    x, y = x[:max_samples], y[:max_samples]
-    model.eval()
-    with torch.no_grad():
-        output = model(x)
 
-    log_predictions(
-        x,
-        normalizer.inverse_transform(y),
-        normalizer.inverse_transform(output),
-        mlf_logger)
+    # Visualization of predictions on validation set
+    if cfg.settings.visualize_after_training:
+        batch = next(iter(val_loader))
+        x, y = batch
+        max_samples = min(x.shape[0], 5)  # Limit to 5 samples for visualization
+        x, y = x[:max_samples], y[:max_samples]
+        model.eval()
+        with torch.no_grad():
+            output = model(x)
+
+        log_predictions(
+            x,
+            normalizer.inverse_transform(y),
+            normalizer.inverse_transform(output),
+            mlf_logger)
 
     # Compute final validation loss to return for hyperparameter optimization
     val_loss = 0.0

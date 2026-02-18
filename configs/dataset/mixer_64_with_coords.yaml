@@ -1,0 +1,6 @@
+batch_size: 8
+num_workers: 4
+val_split: 0.2
+data_file: "./data/mixer_64_with_coords.npz"
+max_samples: 0
+normalize: True

@@ -6,4 +6,4 @@ defaults:
   - settings: default
   - _self_
 
-experiment_name: "mixer_channels_vs_depth"
+experiment_name: "unet_64_speedtest"

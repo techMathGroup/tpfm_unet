@@ -12,7 +12,9 @@ class UNet(pl.LightningModule):
                  depth=3,
                  kernel_size=3,
                  padding=1,
-                 learning_rate=1e-3
+                 learning_rate=1e-3,
+                 use_smoothing=True,
+                 use_tv_loss=True,
                  ):
         super().__init__()
         self.save_hyperparameters(ignore=['mean', 'std'])
@@ -24,6 +26,8 @@ class UNet(pl.LightningModule):
         self.kernel_size = kernel_size
         self.padding = padding
         self.learning_rate = learning_rate
+        self.use_smoothing = use_smoothing
+        self.use_tv_loss = use_tv_loss
 
         # Store mean and std as buffers for device management
         # self.register_buffer('mean', mean)
@@ -65,7 +69,6 @@ class UNet(pl.LightningModule):
         self.init_gaussian_kernel(self.smoothing, 5, 1.0)
 
         # Loss function
-        # TODO: add physics loss
         self.mse_loss = nn.MSELoss()
         # self.metric = MeanSquaredError()
 
@@ -113,9 +116,11 @@ class UNet(pl.LightningModule):
 
     def loss_fn(self, pred, target, tv_weight=0.1, lap_weight=0.05):
         mse = self.mse_loss(pred, target)
-        tv = tv_weight * self.tv_loss(pred)
-        # lap = lap_weight * self.laplacian_loss(pred)
-        return mse + tv
+        if self.use_tv_loss:
+            tv = tv_weight * self.tv_loss(pred)
+            return mse + tv
+        else:
+            return mse
 
     @staticmethod
     def denormalize_output(sample, mean, std, eps=1e-6):
@@ -166,7 +171,9 @@ class UNet(pl.LightningModule):
             out = decoder(torch.cat([up, skip], dim=1))
 
         out = self.final(out)
-        out = self.smoothing(out)
+
+        if self.use_smoothing:
+            out = self.smoothing(out)
 
         if denormalize and (mean is not None) and (std is not None):
             out = self.denormalize_output(out, mean, std)

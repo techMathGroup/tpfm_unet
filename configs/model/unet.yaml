@@ -6,3 +6,5 @@ depth: 3
 kernel_size: 3
 padding: 1
 learning_rate: 3e-4
+use_tv_loss: True
+use_smoothing: True

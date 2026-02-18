@@ -4,6 +4,8 @@ from omegaconf import DictConfig
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import MLFlowLogger
+from torch.utils.data import default_collate
+
 from model import UNet
 from datamodule import FluidFlowDataModule
 import torch
@@ -51,10 +53,11 @@ def main(cfg: DictConfig):
 
     # Visualization of predictions on validation set
     if cfg.settings.visualize_after_training:
-        batch = next(iter(val_loader))
+        # batch = next(iter(val_loader))
+        max_samples = min(5, len(val_loader.dataset))
+        batch = [val_loader.dataset[i] for i in range(max_samples)]
+        batch = default_collate(batch)  # Collate into a batch tensor
         x, y = batch
-        max_samples = min(x.shape[0], 5)  # Limit to 5 samples for visualization
-        x, y = x[:max_samples], y[:max_samples]
         model.eval()
         with torch.no_grad():
             output = model(x)

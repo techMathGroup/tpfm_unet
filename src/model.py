@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
-# from torchmetrics import MeanSquaredError
 
 
 class UNet(pl.LightningModule):
@@ -70,7 +69,6 @@ class UNet(pl.LightningModule):
 
         # Loss function
         self.mse_loss = nn.MSELoss()
-        # self.metric = MeanSquaredError()
 
     @staticmethod
     def init_gaussian_kernel(layer, k, sigma):
@@ -103,18 +101,7 @@ class UNet(pl.LightningModule):
         dy = p[:, :, :, 1:] - p[:, :, :, :-1]
         return dx.abs().mean() + dy.abs().mean()
 
-    @staticmethod
-    def laplacian_loss(pred):
-        kernel = torch.tensor(
-            [[0, 1, 0],
-             [1, -4, 1],
-             [0, 1, 0]], dtype=torch.float32, device=pred.device
-        ).view(1, 1, 3, 3)
-        # Apply to pressure channel (assumed to be channel index 3)
-        lap = torch.nn.functional.conv2d(pred[:, 3:4, :, :], kernel, padding=1, )
-        return lap.pow(2).mean()
-
-    def loss_fn(self, pred, target, tv_weight=0.1, lap_weight=0.05):
+    def loss_fn(self, pred, target, tv_weight=0.1):
         mse = self.mse_loss(pred, target)
         if self.use_tv_loss:
             tv = tv_weight * self.tv_loss(pred)
@@ -145,8 +132,6 @@ class UNet(pl.LightningModule):
         return x
 
     def forward(self, x, debug=False, denormalize=False, mean=None, std=None):
-        # inputs = x.clone()
-
         enc_features = []
         out = x
         for i, encoder in enumerate(self.encoders):
@@ -206,7 +191,6 @@ class UNet(pl.LightningModule):
         loss = self.loss_fn(y_hat, y)
         # Log loss
         self.log('validation_loss', loss)
-        # self.log('validation_mse', self.metric(y_hat, y))
 
     def configure_optimizers(self):
         """

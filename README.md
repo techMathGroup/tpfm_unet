@@ -1,6 +1,7 @@
 # TPFM U-Net: Fluid Flow Prediction
 
 [![Paper](https://img.shields.io/badge/Paper-DOI:10.14311/TPFM.2026.019-blue.svg)](https://doi.org/10.14311/TPFM.2026.019)
+[![Dataset](https://img.shields.io/badge/Dataset-DOI:10.5281/zenodo.21159304-blue.svg)](https://doi.org/10.5281/zenodo.21159304)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg)](https://pytorch.org/)
 
